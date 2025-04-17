@@ -1,0 +1,65 @@
+## Build Folders
+bin/
+obj/
+artifacts/
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vscode/
+*.vs/
+*.code-workspace
+
+## Build Logs
+*.log
+*.tlog
+
+## .NET Core
+project.lock.json
+project.fragment.lock.json
+
+## ASP.NET/Blazor Scaffolding
+ScaffoldingReadMe.txt
+
+## Package Folders
+packages/
+*.nupkg
+*.snupkg
+
+## Node.js (if using npm/yarn for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+## Static web assets (if generated)
+wwwroot/generated/
+wwwroot/dist/
+wwwroot/node_modules/
+
+## Coverage and Test Results
+TestResults/
+*.coverage
+*.coveragexml
+*.trx
+
+## Azure Artifacts / DevOps
+*.azure-pipelines.yml
+.azdo/
+
+## IDE files
+.idea/
+.vscode/
+.localhistory/
+*.orig
+
+## Secrets (don't commit these if you're using them)
+secrets.json
+
+## Others
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
