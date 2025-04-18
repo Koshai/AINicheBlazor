@@ -1,19 +1,59 @@
 ﻿@inherits LayoutComponentBase
-
-<PageTitle>AINicheGen</PageTitle>
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using Services
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@inject ProtectedSessionStorage SessionStorage
 
 <div class="page">
-    <!-- <div class="sidebar">
+    <div class="sidebar">
         <NavMenu />
-    </div> -->
+    </div>
 
     <main>
-        <!-- <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
-        </div> -->
+        <div class="top-row px-4">
+            @if (isAuthenticated)
+            {
+                <div class="d-flex align-items-center">
+                    <span class="me-3">Hello, @userEmail</span>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="HandleLogout">Logout</button>
+                </div>
+            }
+            else
+            {
+                <div>
+                    <a href="/login" class="btn btn-sm btn-primary me-2">Login</a>
+                    <a href="/register" class="btn btn-sm btn-outline-primary">Register</a>
+                </div>
+            }
+        </div>
 
         <article class="content px-4">
             @Body
         </article>
     </main>
 </div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string userEmail = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticated();
+        if (isAuthenticated)
+        {
+            var result = await SessionStorage.GetAsync<string>("user_email");
+            if (result.Success)
+            {
+                userEmail = result.Value;
+            }
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.Logout();
+        NavigationManager.NavigateTo("/login");
+    }
+}

@@ -1,56 +1,100 @@
 ﻿@page "/"
-@inject IHttpClientFactory HttpClientFactory
+@using Services
+@inject ContentService ContentService
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
 
 <section class="text-center my-5">
     <h1 class="display-4">🔥 AI Niche Content Generator</h1>
     <p class="lead">Effortlessly create high-quality blog posts, product descriptions, and social media captions tailored to any niche using AI.</p>
 </section>
 
-<section class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card p-4 shadow-sm">
-            <h4 class="mb-3">Generate Your Content</h4>
-            <div class="mb-3">
-                <label for="niche">Niche</label>
-                <input @bind="niche" id="niche" class="form-control" placeholder="e.g., gardening, gaming, fashion" />
-            </div>
-            <div class="mb-3">
-                <label for="type">Content Type</label>
-                <select @bind="contentType" id="type" class="form-control">
-                    <option>Blog Post</option>
-                    <option>Product Description</option>
-                    <option>Social Caption</option>
-                    <option>Marketing Motto</option> @* New Option *@
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="language">Language</label>
-                <select @bind="selectedLanguage" id="language" class="form-control">
-                    <option value="en">English</option>
-                    <option value="bn">Bangla</option>
-                </select>
-            </div>
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" id="useOpenAI" @bind="useOpenAI" />
-                <label class="form-check-label" for="useOpenAI">
-                    Use Premium (OpenAI) Model
-                </label>
-            </div>
-            <button class="btn btn-primary w-100" @onclick="GenerateContent">Generate</button>
-        </div>
-    </div>
-</section>
-
-@if (!string.IsNullOrEmpty(generatedContent))
+@if (isAuthenticated)
 {
-    <section class="row justify-content-center mt-5">
-        <div class="col-md-8">
-            <h3>📝 Your AI-Generated Content</h3>
-            <div class="border p-3 rounded bg-light">
-                <pre class="mb-0">@generatedContent</pre>
+    <section class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card p-4 shadow-sm">
+                <h4 class="mb-3">Generate Your Content</h4>
+                <div class="mb-3">
+                    <label for="niche">Niche</label>
+                    <input @bind="niche" id="niche" class="form-control" placeholder="e.g., gardening, gaming, fashion" />
+                </div>
+                <div class="mb-3">
+                    <label for="type">Content Type</label>
+                    <select @bind="contentType" id="type" class="form-control">
+                        <option>Blog Post</option>
+                        <option>Product Description</option>
+                        <option>Social Media</option>
+                        <option>Email Newsletter</option>
+                        <option>Landing Page</option>
+                        <option>SEO Article</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="language">Language</label>
+                    <select @bind="selectedLanguage" id="language" class="form-control">
+                        <option value="en">English</option>
+                        <option value="bn">Bangla</option>
+                    </select>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="useOpenAI" @bind="useOpenAI" />
+                    <label class="form-check-label" for="useOpenAI">
+                        Use Premium (OpenAI) Model
+                    </label>
+                </div>
+                <button class="btn btn-primary w-100" @onclick="GenerateContent" disabled="@isGenerating">
+                    @if (isGenerating)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span class="ms-1">Generating...</span>
+                    }
+                    else
+                    {
+                        <span>Generate</span>
+                    }
+                </button>
             </div>
         </div>
     </section>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <section class="row justify-content-center mt-4">
+            <div class="col-md-8">
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
+            </div>
+        </section>
+    }
+
+    @if (!string.IsNullOrEmpty(generatedContent))
+    {
+        <section class="row justify-content-center mt-5">
+            <div class="col-md-8">
+                <h3>📝 Your AI-Generated Content</h3>
+                <div class="border p-3 rounded bg-light">
+                    <pre class="mb-0">@generatedContent</pre>
+                </div>
+            </div>
+        </section>
+    }
+}
+else
+{
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card text-center p-4 shadow">
+                <h4 class="mb-3">Authentication Required</h4>
+                <p>Please login or register to generate content.</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="/login" class="btn btn-primary">Login</a>
+                    <a href="/register" class="btn btn-outline-primary">Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 <section class="text-center mt-5 text-muted">
@@ -61,36 +105,53 @@
     private string niche = string.Empty;
     private string contentType = "Blog Post";
     private string generatedContent = string.Empty;
+    private string errorMessage = string.Empty;
     private bool useOpenAI = false;
     private string selectedLanguage = "en"; // Default to English
+    private bool isGenerating = false;
+    private bool isAuthenticated = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticated();
+    }
 
     private async Task GenerateContent()
     {
-        var client = HttpClientFactory.CreateClient();
-
-        var payload = new
+        if (string.IsNullOrEmpty(niche))
         {
-            niche = niche,
-            type = contentType,
-            engine = useOpenAI ? "openai" : "ollama",
-            language = selectedLanguage
-        };
-
-        var response = await client.PostAsJsonAsync("http://localhost:5000/generate", payload);
-
-        if (response.IsSuccessStatusCode)
-        {
-            var result = await response.Content.ReadFromJsonAsync<AIResponse>();
-            generatedContent = result?.Content ?? "No content returned.";
+            errorMessage = "Please enter a niche to generate content.";
+            return;
         }
-        else
-        {
-            generatedContent = "Error contacting AI backend.";
-        }
-    }
 
-    public class AIResponse
-    {
-        public string Content { get; set; } = string.Empty;
+        errorMessage = string.Empty;
+        isGenerating = true;
+
+        try
+        {
+            var result = await ContentService.GenerateContent(niche, contentType, useOpenAI, selectedLanguage);
+            
+            if (result.Success)
+            {
+                generatedContent = result.Content;
+            }
+            else
+            {
+                errorMessage = result.Error;
+                if (result.Error?.Contains("Authentication required") == true)
+                {
+                    isAuthenticated = false;
+                    NavigationManager.NavigateTo("/login");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
     }
 }
