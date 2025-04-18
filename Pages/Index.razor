@@ -5,13 +5,140 @@
 @inject NavigationManager NavigationManager
 
 <section class="text-center my-5">
-    <h1 class="display-4">🔥 AI Niche Content Generator</h1>
-    <p class="lead">Effortlessly create high-quality blog posts, product descriptions, and social media captions tailored to any niche using AI.</p>
+    <h1 class="display-4">🔥 AI Clothing Content Generator</h1>
+    <p class="lead">Create high-quality clothing descriptions tailored to your specific categories with AI assistance.</p>
 </section>
 
 @if (isAuthenticated)
 {
     <section class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card p-4 shadow-sm">
+                <h4 class="mb-3">Generate Your Content</h4>
+
+                <div class="mb-3">
+                    <label>Category Selection</label>
+                    <div class="border p-3 rounded">
+                        <div class="mb-2">
+                            <select value="@selectedMainCategory" @onchange="LoadSubcategories" class="form-control">
+                                <option value="">Select Main Category</option>
+                                @foreach (var category in mainCategories)
+                                {
+                                    <option value="@category">@category</option>
+                                }
+                            </select>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(selectedMainCategory))
+                        {
+                            <div class="mb-2">
+                                <select value="@selectedSubCategory" @onchange="LoadSubSubcategories" class="form-control">
+                                    <option value="">Select Sub Category</option>
+                                    @foreach (var category in subCategories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(selectedSubCategory))
+                        {
+                            <div class="mb-2">
+                                <select value="@selectedSubSubCategory" @onchange="LoadFinalCategories" class="form-control">
+                                    <option value="">Select Type</option>
+                                    @foreach (var category in subSubCategories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(selectedSubSubCategory) && finalCategories.Any())
+                        {
+                            <div class="mb-2">
+                                <select @bind="selectedFinalCategory" class="form-control">
+                                    <option value="">Select Specific Type</option>
+                                    @foreach (var category in finalCategories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        <div class="mt-3">
+                            <h6>Selected Categories:</h6>
+                            <ul class="list-group">
+                                @foreach (var cat in selectedCategories)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        @cat
+                                        <button class="btn btn-sm btn-danger" @onclick="@(() => RemoveCategory(cat))">
+                                            <i class="bi bi-x"></i> Remove
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                            <button class="btn btn-sm btn-success mt-2" @onclick="AddCategory" disabled="@(!CanAddCategory())">
+                                <i class="bi bi-plus"></i> Add Current Selection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="primaryColor">Primary Color</label>
+                    <select @bind="selectedColor" id="primaryColor" class="form-control">
+                        <option value="">Select a Color</option>
+                        @foreach (var color in colors)
+                        {
+                            <option value="@color">@color</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="additionalWords">Additional Keywords (max 5 words)</label>
+                    <input @bind="additionalWords" id="additionalWords" class="form-control"
+                           placeholder="e.g., vintage, summer, slim-fit" maxlength="50" />
+                    <small class="text-muted">Separate words with commas</small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="contentType">Content Type</label>
+                    <select @bind="contentType" id="contentType" class="form-control">
+                        <option>Blog Post</option>
+                        <option>Product Description</option>
+                        <option>Social Media</option>
+                        <option>Email Newsletter</option>
+                        <option>Landing Page</option>
+                        <option>SEO Article</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="language">Language</label>
+                    <select @bind="selectedLanguage" id="language" class="form-control">
+                        <option value="en">English</option>
+                        <option value="bn">Bangla</option>
+                    </select>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="useOpenAI" @bind="useOpenAI" />
+                    <label class="form-check-label" for="useOpenAI">
+                        Use Premium (OpenAI) Model
+                    </label>
+                </div>
+
+                <button class="btn btn-primary w-100" @onclick="GenerateContent" disabled="@(!CanGenerate())">Generate</button>
+            </div>
+        </div>
+    </section>
+
+    @* <section class="row justify-content-center">
         <div class="col-md-6">
             <div class="card p-4 shadow-sm">
                 <h4 class="mb-3">Generate Your Content</h4>
@@ -56,7 +183,7 @@
                 </button>
             </div>
         </div>
-    </section>
+    </section> *@
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
@@ -102,34 +229,186 @@ else
 </section>
 
 @code {
-    private string niche = string.Empty;
-    private string contentType = "Blog Post";
-    private string generatedContent = string.Empty;
+    //private string niche = string.Empty;
+    //private string contentType = "Blog Post";
+    //private string generatedContent = string.Empty;
     private string errorMessage = string.Empty;
-    private bool useOpenAI = false;
-    private string selectedLanguage = "en"; // Default to English
+    //private bool useOpenAI = false;
+    //private string selectedLanguage = "en"; // Default to English
     private bool isGenerating = false;
     private bool isAuthenticated = false;
+
+    // Generated content
+    private string generatedContent = string.Empty;
+    private bool useOpenAI = false;
+    private string selectedLanguage = "en"; // Default to English
+    private string contentType = "Product Description";
+
+    // Category hierarchy
+    private List<string> mainCategories = new List<string> { "Men", "Women", "Kids", "Unisex", "Accessories", "Footwear" };
+    private List<string> subCategories = new List<string>();
+    private List<string> subSubCategories = new List<string>();
+    private List<string> finalCategories = new List<string>();
+
+    // Current selections
+    private string selectedMainCategory = string.Empty;
+    private string selectedSubCategory = string.Empty;
+    private string selectedSubSubCategory = string.Empty;
+    private string selectedFinalCategory = string.Empty;
+
+    // Selected categories list
+    private List<string> selectedCategories = new List<string>();
+
+    // Color selection
+    private List<string> colors = new List<string> {
+        "Black", "White", "Red", "Blue", "Green",
+        "Yellow", "Purple", "Pink", "Orange", "Brown",
+        "Gray", "Navy", "Beige", "Burgundy", "Teal"
+    };
+    private string selectedColor = string.Empty;
+
+    // Additional words
+    private string additionalWords = string.Empty;
+
+    // Category data
+    private Dictionary<string, List<string>> categoryMapping = new Dictionary<string, List<string>>();
 
     protected override async Task OnInitializedAsync()
     {
         isAuthenticated = await AuthService.IsAuthenticated();
+        await LoadCategoryData();
     }
+
+    private async Task LoadCategoryData()
+    {
+        await ContentService.LoadCategoryData();
+    }
+
+    private void LoadSubcategories(ChangeEventArgs e)
+    {
+        selectedMainCategory = e.Value.ToString();
+        subCategories.Clear();
+        selectedSubCategory = string.Empty;
+        subSubCategories.Clear();
+        selectedSubSubCategory = string.Empty;
+        finalCategories.Clear();
+        selectedFinalCategory = string.Empty;
+
+        if (!string.IsNullOrEmpty(selectedMainCategory))
+        {
+            // In real implementation, filter from categoryMapping
+            // For example: subCategories = categoryMapping[selectedMainCategory];
+
+            // Mock data for demo
+            if (selectedMainCategory == "Men" || selectedMainCategory == "Women")
+                subCategories = new List<string> { "Tops", "Bottoms", "Outerwear" };
+            else if (selectedMainCategory == "Kids")
+                subCategories = new List<string> { "Boys", "Girls" };
+            else if (selectedMainCategory == "Accessories")
+                subCategories = new List<string> { "Headwear", "Eyewear", "Belts & Suspenders", "Scarves & Shawls" };
+            else if (selectedMainCategory == "Footwear")
+                subCategories = new List<string> { "Sneakers", "Boots", "Sandals", "Formal Shoes" };
+        }
+    }
+
+    private void LoadSubSubcategories(ChangeEventArgs e)
+    {
+        selectedSubCategory = e.Value.ToString();
+        subSubCategories.Clear();
+        selectedSubSubCategory = string.Empty;
+        finalCategories.Clear();
+        selectedFinalCategory = string.Empty;
+
+        if (!string.IsNullOrEmpty(selectedSubCategory))
+        {
+            // Mock data for demo
+            if (selectedSubCategory == "Tops")
+                subSubCategories = new List<string> { "T-Shirts", "Shirts", "Sweaters & Cardigans", "Sweatshirts & Hoodies" };
+            else if (selectedSubCategory == "Bottoms")
+                subSubCategories = new List<string> { "Jeans", "Trousers / Pants", "Shorts", "Skirts" };
+        }
+    }
+
+    private void LoadFinalCategories(ChangeEventArgs e)
+    {
+        selectedSubSubCategory = e.Value.ToString();
+        finalCategories.Clear();
+        selectedFinalCategory = string.Empty;
+
+        if (!string.IsNullOrEmpty(selectedSubSubCategory))
+        {
+            // Mock data for demo
+            if (selectedSubSubCategory == "T-Shirts")
+                finalCategories = new List<string> { "Graphic Tees", "Basic Tees", "Longline" };
+            else if (selectedSubSubCategory == "Jeans")
+                finalCategories = new List<string> { "Skinny", "Straight", "Bootcut", "Wide-Leg" };
+        }
+    }
+
+    private void AddCategory()
+    {
+        string categoryPath = BuildCategoryPath();
+        if (!string.IsNullOrEmpty(categoryPath) && !selectedCategories.Contains(categoryPath))
+        {
+            selectedCategories.Add(categoryPath);
+        }
+    }
+
+    private void RemoveCategory(string category)
+    {
+        selectedCategories.Remove(category);
+    }
+
+    private string BuildCategoryPath()
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrEmpty(selectedMainCategory))
+            parts.Add(selectedMainCategory);
+
+        if (!string.IsNullOrEmpty(selectedSubCategory))
+            parts.Add(selectedSubCategory);
+
+        if (!string.IsNullOrEmpty(selectedSubSubCategory))
+            parts.Add(selectedSubSubCategory);
+
+        if (!string.IsNullOrEmpty(selectedFinalCategory))
+            parts.Add(selectedFinalCategory);
+
+        return string.Join(" > ", parts);
+    }
+
+    private bool CanAddCategory()
+    {
+        return !string.IsNullOrEmpty(selectedMainCategory) &&
+               selectedCategories.Count < 5 &&
+               !string.IsNullOrEmpty(BuildCategoryPath()) &&
+               !selectedCategories.Contains(BuildCategoryPath());
+    }
+
+    private bool CanGenerate()
+    {
+        return selectedCategories.Count > 0 &&
+               !string.IsNullOrEmpty(selectedColor) &&
+               !string.IsNullOrEmpty(contentType);
+    }
+
 
     private async Task GenerateContent()
     {
-        if (string.IsNullOrEmpty(niche))
-        {
-            errorMessage = "Please enter a niche to generate content.";
-            return;
-        }
+
+        //if (string.IsNullOrEmpty(niche))
+        //{
+        //    errorMessage = "Please enter a niche to generate content.";
+        //    return;
+        //}
 
         errorMessage = string.Empty;
         isGenerating = true;
 
         try
         {
-            var result = await ContentService.GenerateContent(niche, contentType, useOpenAI, selectedLanguage);
+            var result = await ContentService.GenerateContent(selectedCategories, selectedColor, additionalWords, contentType, useOpenAI, selectedLanguage);
             
             if (result.Success)
             {
